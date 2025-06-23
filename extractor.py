@@ -57,8 +57,8 @@ def extract_axis_values(img, x_axis, y_axis):
     x_text = pytesseract.image_to_string(x_text_region, config='--psm 6 --oem 3')
     
     x3, y3, x4, y4 = y_axis
-    y_text_region = img[y4:y3, x3-40:x3]
-    cv2.rectangle(img, (x3-40, y4), (x3, y3), (255, 0, 0), 2)
+    y_text_region = img[y4:y3, x3-45:x3]
+    cv2.rectangle(img, (x3-45, y4), (x3, y3), (255, 0, 0), 2)
     y_text_region_gray = cv2.cvtColor(y_text_region, cv2.COLOR_BGR2GRAY)
     _, y_text_region = cv2.threshold(y_text_region_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     y_text = pytesseract.image_to_string(y_text_region, config='--psm 6 --oem 3')
@@ -67,6 +67,9 @@ def extract_axis_values(img, x_axis, y_axis):
 
     y_values = [float(num) for num in re.findall(r'\d+\.\d+', y_text)]
     x_values = [int(num) for num in re.findall(r'\d+', x_text)]
+
+    # print("x_val: ", x_values)
+    # print("y_val: ", y_values)
     
     return x_values, y_values
 
@@ -146,6 +149,8 @@ def detect_grid_lines(img, x_vals, y_vals):
     # Detect vertical lines by scanning columns
     vertical_lines = []
     for x in range(w):
+        if x < 2 or x > w - 2:
+            continue 
         col = binary[:, x]
         if np.count_nonzero(col) > h * 0.8:
             vertical_lines.append(x)
@@ -153,6 +158,8 @@ def detect_grid_lines(img, x_vals, y_vals):
     # Detect horizontal lines by scanning rows
     horizontal_lines = []
     for y in range(h):
+        if y < 4 or y > h - 4:
+            continue 
         row = binary[y, :]
         if np.count_nonzero(row) > w * 0.8:
             horizontal_lines.append(y)
@@ -161,11 +168,8 @@ def detect_grid_lines(img, x_vals, y_vals):
     vertical_lines = cluster_positions(vertical_lines)
     horizontal_lines = cluster_positions(horizontal_lines)
 
-    # Remove outermost lines
-    if len(vertical_lines) > len(x_vals):
-        vertical_lines = vertical_lines[1:-1]
-    if len(horizontal_lines) > len(y_vals):
-        horizontal_lines = horizontal_lines[1:-1]
+    # print(horizontal_lines)
+    # print(vertical_lines)
 
     x_vals = fill_linear(x_vals, len(vertical_lines))
     y_vals = fill_linear(y_vals, len(horizontal_lines))
@@ -262,14 +266,14 @@ def make_csv(datapoints, csv_path):
         writer.writerow(['X', 'Y'])
         writer.writerows(datapoints)
 
-img, gray, thresh = preprocess_image('graph/graph1.png')
+img, gray, thresh = preprocess_image('graph/graph3.png')
 x_axis, y_axis = detect_axes(thresh, img)
 x_values, y_values = extract_axis_values(img, x_axis, y_axis)
 cropped_graph = crop_graph(img, x_axis, y_axis)
 x_pos, y_pos = detect_grid_lines(cropped_graph, x_values, y_values)
 data_points, y_val = digitize_graph_data(cropped_graph, x_pos, y_pos, x_values, y_values)
 analyze_graph(y_val)
-make_csv(data_points, 'csv/graph1.csv')
+make_csv(data_points, 'csv/graph3.csv')
 
 cv2.waitKey(0)
 cv2.destroyAllWindows()
