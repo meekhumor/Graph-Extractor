@@ -6,6 +6,8 @@ import csv
 import pandas as pd
 from scipy.stats import skew, kurtosis
 from scipy.interpolate import interp1d
+from scipy.signal import argrelextrema
+
 
 def preprocess_image(image_path):
     img = cv2.imread(image_path)
@@ -229,6 +231,10 @@ def digitize_graph_data(img, x_pixel_positions, y_pixel_positions, x_values, y_v
     boundary_margin = 10  
 
     data_points = []
+    y_val_only = []
+
+    pixel_points = []
+
     for i in range(0, len(points), step):
         px, py = points[i]
         if (boundary_margin < px < w - boundary_margin and
@@ -236,12 +242,29 @@ def digitize_graph_data(img, x_pixel_positions, y_pixel_positions, x_values, y_v
             x_val = pixel_to_x(px)
             y_val = pixel_to_y(py)
             data_points.append((x_val, y_val))
-            cv2.circle(img, (px, py), 2, (0, 0, 255), -1)
+            y_val_only.append(y_val)
+            pixel_points.append((px, py)) 
 
-    cv2.imshow("Data points", img)
+            # cv2.circle(img, (px, py), 2, (0, 0, 255), -1)
+
+    # cv2.imshow("Data points", img)
     y_val = [y for _, y in data_points]
 
-    return data_points, y_val
+    return data_points, y_val_only, pixel_points
+
+def deviation_points(img, pixel_points, y_vals, order=10):
+    y = np.array(y_vals)
+
+    maxima_idx = argrelextrema(y, np.greater, order=order)[0]
+    minima_idx = argrelextrema(y, np.less, order=order)[0]
+    critical_idx = np.sort(np.concatenate([maxima_idx, minima_idx]))
+
+    for i in critical_idx:
+        px, py = pixel_points[i]
+        cv2.circle(img, (px, py), 3, (0, 255, 0), -1) 
+
+    cv2.imshow("Data Points", img)
+
 
 def analyze_graph(y):
 
@@ -271,9 +294,12 @@ x_axis, y_axis = detect_axes(thresh, img)
 x_values, y_values = extract_axis_values(img, x_axis, y_axis)
 cropped_graph = crop_graph(img, x_axis, y_axis)
 x_pos, y_pos = detect_grid_lines(cropped_graph, x_values, y_values)
-data_points, y_val = digitize_graph_data(cropped_graph, x_pos, y_pos, x_values, y_values)
+
+data_points, y_val, pixel_points = digitize_graph_data(cropped_graph, x_pos, y_pos, x_values, y_values)
+deviation_points(cropped_graph, pixel_points, y_val, order=10)
 analyze_graph(y_val)
 make_csv(data_points, 'csv/graph3.csv')
+
 
 cv2.waitKey(0)
 cv2.destroyAllWindows()
