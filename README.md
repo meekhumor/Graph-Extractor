@@ -84,7 +84,6 @@ X,Y
 5. **Digitization:** Finds non-zero pixels (data points), interpolates pixel coordinates to real values.
 6. **Analysis:** Detects local extrema, computes statistics, and exports to CSV.
 
-*Note:* The script assumes clean, axis-aligned line graphs. For noisy or complex graphs, preprocessing parameters (e.g., thresholds) may need tuning.
 
 ## Directory Structure
 
